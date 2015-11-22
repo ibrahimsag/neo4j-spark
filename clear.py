@@ -102,7 +102,7 @@ def prepare_for_csv(data_file):
         return processed_line
     return prepare_props
 
-def get_records_rdd(data_file):
+def get_records_rdd(sc, data_file):
     print("reading ", data_file.file_path)
     input_file = sc.textFile(data_file.file_path)
     print("getting header ", data_file.file_path)
@@ -115,7 +115,7 @@ def get_records_rdd(data_file):
     )
 
 def process_file(sc, data_file):
-    records_rdd = get_records_rdd(data_file)
+    records_rdd = get_records_rdd(sc, data_file)
     clear_file = records_rdd.map(prepare_for_csv(data_file))
     with open(data_file.output_file, 'w') as f:
         f.write(DELIMITER.join([c['label'] for c in data_file.columns]))
@@ -137,16 +137,12 @@ def process_files(sc):
 def split_del(line):
     return l.split(DELIMITER)
 
-if __name__ == "__main__":
-    sc = SparkContext(appName="ClearCSV")
-
-    process_files(sc)
-
+def add_missing_isbns(sc):
     # prepare (isbn, title) pairs
-    book_records = get_records_rdd(BooksFile)
+    book_records = get_records_rdd(sc, BooksFile)
     isbn_titles = book_records.map(lambda l: l[:2])
     # prepare (isbn, userid) pairs
-    rating_records = get_records_rdd(RatingsFile)
+    rating_records = get_records_rdd(sc, RatingsFile)
     rating_pairs = rating_records.map(lambda l: (l[1], l[0]))
 
     # join pair rdds to get nonexistent isbns
@@ -164,5 +160,11 @@ if __name__ == "__main__":
         .collect()
     )
     append_to_file(BooksFile.output_file, missing_isbns)
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="ClearCSV")
+
+    process_files(sc)
+    add_missing_isbns(sc)
     
     sc.stop()
