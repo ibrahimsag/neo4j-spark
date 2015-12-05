@@ -96,11 +96,13 @@ def prepare_file(data_file):
         return props
     return prepare_line
 
+
 def prepare_for_csv(data_file):
     def prepare_props(props):
         processed_line = DELIMITER.join([c['get'](props) for c in data_file.columns])
         return processed_line
     return prepare_props
+
 
 def get_records_rdd(sc, data_file):
     print("reading ", data_file.file_path)
@@ -113,6 +115,7 @@ def get_records_rdd(sc, data_file):
         .filter(lambda l: l != header_line)
         .map(prepare_file(data_file))
     )
+
 
 def process_file(sc, data_file):
     records_rdd = get_records_rdd(sc, data_file)
@@ -129,13 +132,12 @@ def append_to_file(file_path, lines):
         for line in lines:
             f.write('\n' + line.encode('utf8'))
 
+
 def process_files(sc):
     process_file(sc, BooksFile())
     process_file(sc, UsersFile())
     process_file(sc, RatingsFile())
 
-def split_del(line):
-    return l.split(DELIMITER)
 
 def add_missing_isbns(sc):
     # prepare (isbn, title) pairs
@@ -160,6 +162,7 @@ def add_missing_isbns(sc):
         .collect()
     )
     append_to_file(BooksFile.output_file, missing_isbns)
+
 
 if __name__ == "__main__":
     sc = SparkContext(appName="ClearCSV")
